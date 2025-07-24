@@ -13,8 +13,16 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
+enum editorKeys {
+    ARROW_LEFT = 1000,
+    ARROW_RIGHT,
+    ARROW_UP,
+    ARROW_DOWN
+};
+
 /*** data ***/
 struct editorConfig {
+    int cursorX, cursorY;
     int screenrows;
     int screencols;
     struct termios orig_termios;
@@ -58,7 +66,7 @@ void enableRawMode() {
     }
 }
 
-char editorReadKey() {
+int editorReadKey() {
     int nread;
     char c;
 
@@ -67,8 +75,23 @@ char editorReadKey() {
             die("read");
         }
     }
+    if (c == '\x1b') {
+        char seq[3];
 
-    return c;
+        if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
+        if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+        if (seq[0] == '[') {
+            switch (seq[1]) {
+                case 'A':return ARROW_UP;
+                case 'B':return ARROW_DOWN;
+                case 'C':return ARROW_DOWN;
+                case 'D':return ARROW_LEFT;
+            }
+        }
+        return '\x1b';
+    }else {
+        return c;
+    }
 }
 
 int getCursorPosition(int *rows, int *cols) {
@@ -168,7 +191,10 @@ void editorRefreshScreen() {
 
     editorDrawRows(&ab);
 
-    abAppend(&ab, "\x1b[H", 3);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cursorY + 1, E.cursorX + 1);
+    abAppend(&ab, buf, strlen(buf));
+
     abAppend(&ab, "\x1b[?25h", 6);
 
     write(STDOUT_FILENO, ab.buf, ab.len);
@@ -177,13 +203,44 @@ void editorRefreshScreen() {
 
 /*** Input ***/
 
+void editorMoveCursor(int key) {
+    switch (key) {
+        case ARROW_LEFT:
+            if (E.cursorX != 0) {
+                E.cursorX--;
+            }
+            break;
+        case ARROW_RIGHT:
+            if (E.cursorX != E.screencols - 1) {
+                E.cursorX++;
+            }
+            break;
+        case ARROW_UP:
+            if (E.cursorY != 0) {
+                E.cursorY--;
+            }
+            break;
+        case ARROW_DOWN:
+            if (E.cursorY != E.screenrows - 1) {
+                E.cursorY++;
+            }
+            break;
+    }
+}
+
 void editorProcessKeypress() {
-    char c = editorReadKey();
+    int c = editorReadKey();
     switch (c) {
         case CTRL_KEY('q'):
             write(STDOUT_FILENO, "\x1b[2J", 4);
             write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
+            break;
+        case ARROW_UP:
+        case ARROW_DOWN:
+        case ARROW_LEFT:
+        case ARROW_RIGHT:
+            editorMoveCursor(c);
             break;
     }
 }
@@ -191,6 +248,9 @@ void editorProcessKeypress() {
 /*** init/main function ***/
 
 void initEditor() {
+    E.cursorX = 0;
+    E.cursorY = 0;
+
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) {
         die("getWindowSize");
     }
