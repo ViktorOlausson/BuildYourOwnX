@@ -1,4 +1,8 @@
 /*** include ***/
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -7,6 +11,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
 
 /*** defines ***/
 #define EDITOR_VERSION "0.0.1"
@@ -26,10 +31,18 @@ enum editorKeys {
 };
 
 /*** data ***/
+
+typedef struct erow {
+    int size;
+    char *chars;
+} erow;
+
 struct editorConfig {
     int cursorX, cursorY;
     int screenrows;
     int screencols;
+    int nrRows;
+    erow *row;
     struct termios orig_termios;
 };
 
@@ -160,6 +173,36 @@ int getWindowSize(int *rows, int *cols) {
     }
 }
 
+/*** row operations ***/
+
+void editorAppendRow(char *s, size_t len) {
+    E.row.size = len;
+    E.row.chars = malloc(len + 1);
+    memcpy(E.row.chars, s, len);
+    E.row.chars[len] = '\0';
+    E.nrRows = 1;
+}
+
+/*** file I/O ***/
+
+void editorOpen(char *filename) {
+    FILE *fp = fopen(filename, "r");
+
+    char *line = NULL;
+    size_t lineCap = 0;
+    ssize_t lineLen;
+    lineLen = getline(&line, &lineCap, fp);
+    if (lineLen != -1) {
+        while (lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) {
+            lineLen--;
+        }
+
+        editorAppendRow(line, lineLen);
+    }
+    free(line);
+    fclose(fp);
+}
+
 /*** Append buffer ***/
 
 struct abuf {
@@ -186,20 +229,28 @@ void abFree(struct abuf *ab) {
 
 void editorDrawRows(struct abuf *ab) {
     for (int y = 0; y < E.screenrows; y++) {
-        if (y == E.screenrows / 3) {
-            char welcome[80];
-            int welcomeLen = snprintf(welcome, sizeof(welcome),
-                "Text Editor -- version %s", EDITOR_VERSION);
-            if (welcomeLen > E.screencols) welcomeLen = E.screencols;
-            int padding = (E.screencols - welcomeLen) / 2;
-            if (padding) {
+        if (y >= E.nrRows) {
+            if (E.nrRows == 0 && y == E.screenrows / 3) {
+                char welcome[80];
+                int welcomeLen = snprintf(welcome, sizeof(welcome),
+                    "Text Editor -- version %s", EDITOR_VERSION);
+                if (welcomeLen > E.screencols) welcomeLen = E.screencols;
+                int padding = (E.screencols - welcomeLen) / 2;
+                if (padding) {
+                    abAppend(ab, "~", 1);
+                    padding--;
+                }
+                while (padding--) abAppend(ab, " ", 1);
+                abAppend(ab, welcome, welcomeLen);
+            }else {
                 abAppend(ab, "~", 1);
-                padding--;
             }
-            while (padding--) abAppend(ab, " ", 1);
-            abAppend(ab, welcome, welcomeLen);
         }else {
-            abAppend(ab, "~", 1);
+            int len = E.row.size;
+            if (len > E.screencols) {
+                len = E.screencols;
+            }
+            abAppend(ab, E.row.chars, len);
         }
 
         abAppend(ab, "\x1b[K", 3);
@@ -291,15 +342,20 @@ void editorProcessKeypress() {
 void initEditor() {
     E.cursorX = 0;
     E.cursorY = 0;
+    E.nrRows = 0;
+    E.row = NULL;
 
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) {
         die("getWindowSize");
     }
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
     enableRawMode();
     initEditor();
+    if (argc >= 2) {
+        editorOpen(argv[1]);
+    }
 
     while (1) {
         editorRefreshScreen();
