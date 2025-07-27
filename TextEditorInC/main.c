@@ -39,6 +39,7 @@ typedef struct erow {
 
 struct editorConfig {
     int cursorX, cursorY;
+    int rowOff;
     int screenrows;
     int screencols;
     int nrRows;
@@ -49,6 +50,7 @@ struct editorConfig {
 struct editorConfig E;
 
 /*** terminal ***/
+
 void die(const char *s) {
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
@@ -184,7 +186,7 @@ void editorAppendRow(char *s, size_t len) {
     E.row[at].chars = malloc(len + 1);
     memcpy(E.row[at].chars, s, len);
     E.row[at].chars[len] = '\0';
-    E.nrRows ++;
+    E.nrRows++;
 }
 
 /*** file I/O ***/
@@ -231,9 +233,19 @@ void abFree(struct abuf *ab) {
 
 /*** Output ***/
 
+void editorScroll() {
+    if (E.cursorY > E.rowOff) {
+        E.rowOff = E.cursorY;
+    }
+    if (E.cursorY >= E.rowOff + E.screenrows) {
+        E.rowOff = E.cursorY - E.screenrows + 1;
+    }
+}
+
 void editorDrawRows(struct abuf *ab) {
     for (int y = 0; y < E.screenrows; y++) {
-        if (y >= E.nrRows) {
+        int fileRow = y + E.rowOff;
+        if (fileRow >= E.nrRows) {
             if (E.nrRows == 0 && y == E.screenrows / 3) {
                 char welcome[80];
                 int welcomeLen = snprintf(welcome, sizeof(welcome),
@@ -250,11 +262,11 @@ void editorDrawRows(struct abuf *ab) {
                 abAppend(ab, "~", 1);
             }
         }else {
-            int len = E.row[y].size;
+            int len = E.row[fileRow].size;
             if (len > E.screencols) {
                 len = E.screencols;
             }
-            abAppend(ab, E.row[y].chars, len);
+            abAppend(ab, E.row[fileRow].chars, len);
         }
 
         abAppend(ab, "\x1b[K", 3);
@@ -265,6 +277,8 @@ void editorDrawRows(struct abuf *ab) {
 }
 
 void editorRefreshScreen() {
+    editorScroll();
+
     struct abuf ab = ABUF_INIT;
 
     abAppend(&ab, "\x1b[?25l", 6);
@@ -303,7 +317,7 @@ void editorMoveCursor(int key) {
             }
             break;
         case ARROW_DOWN:
-            if (E.cursorY != E.screenrows - 1) {
+            if (E.cursorY < E.screenrows) {
                 E.cursorY++;
             }
             break;
@@ -346,6 +360,7 @@ void editorProcessKeypress() {
 void initEditor() {
     E.cursorX = 0;
     E.cursorY = 0;
+    E.rowOff = 0;
     E.nrRows = 0;
     E.row = NULL;
 
