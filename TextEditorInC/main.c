@@ -110,7 +110,7 @@ int editorReadKey() {
                         case '4': return END_KEY;
                         case '5': return PAGE_UP;
                         case '6': return PAGE_DOWN;
-                        case '7': HOME_KEY;
+                        case '7': return HOME_KEY;
                         case '8': return END_KEY;
                     }
                 }
@@ -118,7 +118,7 @@ int editorReadKey() {
                 switch (seq[1]) {
                     case 'A':return ARROW_UP;
                     case 'B':return ARROW_DOWN;
-                    case 'C':return ARROW_DOWN;
+                    case 'C':return ARROW_RIGHT;
                     case 'D':return ARROW_LEFT;
                     case 'H': return HOME_KEY;
                     case 'F':return END_KEY;
@@ -142,7 +142,7 @@ int getCursorPosition(int *rows, int *cols) {
 
     if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
 
-    printf("\r\n");
+    //printf("\r\n");
     char c;
     while (i < sizeof(buf) - 1) {
         if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
@@ -193,6 +193,9 @@ void editorAppendRow(char *s, size_t len) {
 
 void editorOpen(char *filename) {
     FILE *fp = fopen(filename, "r");
+    if (!fp) {
+        die("fopen");
+    }
 
     char *line = NULL;
     size_t lineCap = 0;
@@ -234,7 +237,7 @@ void abFree(struct abuf *ab) {
 /*** Output ***/
 
 void editorScroll() {
-    if (E.cursorY > E.rowOff) {
+    if (E.cursorY < E.rowOff) {
         E.rowOff = E.cursorY;
     }
     if (E.cursorY >= E.rowOff + E.screenrows) {
