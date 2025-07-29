@@ -313,6 +313,7 @@ void editorRefreshScreen() {
 /*** Input ***/
 
 void editorMoveCursor(int key) {
+    erow *row = (E.cursorY >= E.nrRows) ? NULL : &E.row[E.cursorY];
     switch (key) {
         case ARROW_LEFT:
             if (E.cursorX != 0) {
@@ -332,6 +333,12 @@ void editorMoveCursor(int key) {
                 E.cursorY++;
             }
             break;
+    }
+
+    row = (E.cursorY >= E.nrRows) ? NULL : &E.row[E.cursorY];
+    int rowLen = row ? row->size : 0;
+    if (E.cursorX > rowLen) {
+        E.cursorX = rowLen;
     }
 }
 
