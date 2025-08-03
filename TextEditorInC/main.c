@@ -418,7 +418,7 @@ void editorProcessKeypress() {
             E.cursorX = 0;
             break;
         case END_KEY:
-            E.cursorX = E.screencols - 1;
+            E.cursorX = E.row[E.cursorY].size;
             break;
         case PAGE_UP:
         case PAGE_DOWN: {
