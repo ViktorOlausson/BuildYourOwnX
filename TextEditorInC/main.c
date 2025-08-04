@@ -19,6 +19,7 @@
 /*** defines ***/
 #define EDITOR_VERSION "0.0.1"
 #define TAB_STOP 8
+#define QUIT_TIMES 3
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -53,6 +54,7 @@ struct editorConfig {
     int screencols;
     int nrRows;
     erow *row;
+    int dirty;
     char *filename;
     char statusMSG[80];
     time_t statusMsgTime;
@@ -248,6 +250,7 @@ void editorAppendRow(char *s, size_t len) {
     editorUpdateRow(&E.row[at]);
 
     E.nrRows++;
+    E.dirty++;
 }
 
 void editorRowInsertChar(erow *row, int at, int c) {
@@ -259,6 +262,7 @@ void editorRowInsertChar(erow *row, int at, int c) {
     row->size++;
     row->chars[at] = c;
     editorUpdateRow(row);
+    E.dirty++;
 }
 
 /*** editor operations ***/
@@ -314,6 +318,7 @@ void editorOpen(char *filename) {
     }
     free(line);
     fclose(fp);
+    E.dirty = 0;
 }
 
 void editorSave() {
@@ -329,7 +334,7 @@ void editorSave() {
             if (write(fd, buf, len) == len) {
                 close(fd);
                 free(buf);
-
+                E.dirty = 0;
                 editorSetStatusMessage("%d bytes written to disk", len);
                 return;
             }
@@ -423,8 +428,8 @@ void editorDrawRows(struct abuf *ab) {
 void editorDrawStatusBar(struct abuf *ab) {
     abAppend(ab, "\x1b[7m", 4);
     char status[80], rstatus[80];
-    int len = snprintf(status, sizeof(status), "%.20s - %d lines", E.filename ? E.filename : "[No Filename]", E.nrRows);
-    int rlen = snprintf(status, sizeof(status), "%d/%d lines", E.cursorY + 1, E.nrRows);
+    int len = snprintf(status, sizeof(status), "%.20s - %d lines %s", E.filename ? E.filename : "[No Filename]", E.nrRows, E.dirty ? "(modified)" : "");
+    int rlen = snprintf(rstatus, sizeof(rstatus), "%d/%d", E.cursorY + 1, E.nrRows);
     if (len > E.screencols) {
         len = E.screencols;
     }
@@ -432,7 +437,7 @@ void editorDrawStatusBar(struct abuf *ab) {
 
     while (len < E.screencols) {
         if (E.screencols - len == rlen) {
-            abAppend(ab, rstatus, 1);
+            abAppend(ab, rstatus, rlen);
             break;
         }else {
             abAppend(ab, " ", 1);
@@ -528,6 +533,8 @@ void editorMoveCursor(int key) {
 }
 
 void editorProcessKeypress() {
+    static int quitTimes = QUIT_TIMES;
+
     int c = editorReadKey();
     switch (c) {
         case '\r':
@@ -535,6 +542,12 @@ void editorProcessKeypress() {
             break;
 
         case CTRL_KEY('q'):
+            if (E.dirty && quitTimes > 0) {
+                editorSetStatusMessage("WARNING!!!!! File has unsaved changes. "
+                                       "Press CTRL-Q %d more times to quit", quitTimes);
+                quitTimes--;
+                return;
+            }
             write(STDOUT_FILENO, "\x1b[2J", 4);
             write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
@@ -605,6 +618,7 @@ void initEditor() {
     E.colOff = 0;
     E.nrRows = 0;
     E.row = NULL;
+    E.dirty = 0;
     E.filename = NULL;
     E.statusMSG[0] = '\0';
     E.statusMsgTime = 0;
