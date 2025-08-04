@@ -253,6 +253,19 @@ void editorAppendRow(char *s, size_t len) {
     E.dirty++;
 }
 
+void editorFreeRow(erow *row) {
+    free(row->render);
+    free(row->chars);
+}
+
+void editorDelRow(int at) {
+    if (at < 0 || at >= E.nrRows) return;
+    editorFreeRow(&E.row[at]);
+    memmove(&E.row[at], &E.row[at + 1], sizeof(erow) * (E.nrRows - at - 1));
+    E.nrRows--;
+    E.dirty++;
+}
+
 void editorRowInsertChar(erow *row, int at, int c) {
     if (at < 0 || at > row-> size) {
         at = row->size;
@@ -261,6 +274,15 @@ void editorRowInsertChar(erow *row, int at, int c) {
     memmove(&row->chars[at+1], &row->chars[at], row->size - at + 1);
     row->size++;
     row->chars[at] = c;
+    editorUpdateRow(row);
+    E.dirty++;
+}
+
+void editorRowAppenString(erow *row, char *s, size_t len) {
+    row->chars = realloc(row->chars, row->size + len + 1);
+    memmove(&row->chars[row->size], s, len);
+    row->size += len;
+    row->chars[row->size] = '\0';
     editorUpdateRow(row);
     E.dirty++;
 }
@@ -285,11 +307,17 @@ void editorInserChar(int c) {
 
 void editorDelChar() {
     if (E.cursorY == E.nrRows) return;
+    if (E.cursorX == 0 && E.cursorY == 0) return;
 
     erow *row = &E.row[E.cursorY];
     if (E.cursorX > 0) {
         editorRowDelChar(row, E.cursorX - 1);
         E.cursorX--;
+    }else {
+        E.cursorX = E.row[E.cursorY - 1].size;
+        editorRowAppenString(&E.row[E.cursorY - 1], row->chars, row->size);
+        editorDelRow(E.cursorY);
+        E.cursorY--;
     }
 }
 
