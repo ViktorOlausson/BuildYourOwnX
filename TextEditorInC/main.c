@@ -5,10 +5,12 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -50,6 +52,8 @@ struct editorConfig {
     int nrRows;
     erow *row;
     char *filename;
+    char statusMSG[80];
+    time_t statusMsgTime;
     struct termios orig_termios;
 };
 
@@ -366,6 +370,18 @@ void editorDrawStatusBar(struct abuf *ab) {
         }
     }
     abAppend(ab, "\x1b[m", 3);
+    abAppend(ab, "\r\n", 2);
+}
+
+void editorDrawMessageBar(struct abuf *ab) {
+    abAppend(ab, "\x1b[K", 3);
+    int msgLen = strlen(E.statusMSG);
+    if (msgLen > E.screencols) {
+        msgLen = E.screencols;
+    }
+    if (msgLen && time(NULL) - E.statusMsgTime < 5) {
+        abAppend(ab, E.statusMSG, msgLen);
+    }
 }
 
 void editorRefreshScreen() {
@@ -379,6 +395,7 @@ void editorRefreshScreen() {
 
     editorDrawRows(&ab);
     editorDrawStatusBar(&ab);
+    editorDrawMessageBar(&ab);
 
     char buf[32];
     snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cursorY - E.rowOff) + 1, (E.rx - E.colOff) + 1);
@@ -388,6 +405,14 @@ void editorRefreshScreen() {
 
     write(STDOUT_FILENO, ab.buf, ab.len);
     abFree(&ab);
+}
+
+void editorSetStatusMessage(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(E.statusMSG, sizeof(E.statusMSG), fmt, ap);
+    va_end(ap);
+    E.statusMsgTime = time(NULL);
 }
 
 /*** Input ***/
@@ -484,11 +509,13 @@ void initEditor() {
     E.nrRows = 0;
     E.row = NULL;
     E.filename = NULL;
+    E.statusMSG[0] = '\0';
+    E.statusMsgTime = 0;
 
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) {
         die("getWindowSize");
     }
-    E.screenrows -= 1;
+    E.screenrows -= 2;
 }
 
 int main(int argc, char *argv[]) {
@@ -497,6 +524,8 @@ int main(int argc, char *argv[]) {
     if (argc >= 2) {
         editorOpen(argv[1]);
     }
+
+    editorSetStatusMessage("HELP: CTRL-Q = quit");
 
     while (1) {
         editorRefreshScreen();
