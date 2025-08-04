@@ -22,6 +22,7 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 enum editorKeys {
+    BACKSPACE = 127,
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
     ARROW_UP,
@@ -479,17 +480,30 @@ void editorMoveCursor(int key) {
 void editorProcessKeypress() {
     int c = editorReadKey();
     switch (c) {
+        case '\r':
+            /* TODO */
+            break;
+
         case CTRL_KEY('q'):
             write(STDOUT_FILENO, "\x1b[2J", 4);
             write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
             break;
+
         case HOME_KEY:
             E.cursorX = 0;
             break;
+
         case END_KEY:
             E.cursorX = E.row[E.cursorY].size;
             break;
+
+        case BACKSPACE:
+        case CTRL_KEY('h'):
+        case DELETE_KEY:
+            /* TODO */
+            break;
+
         case PAGE_UP:
         case PAGE_DOWN: {
 
@@ -509,12 +523,18 @@ void editorProcessKeypress() {
             }
             break;
         }
+
         case ARROW_UP:
         case ARROW_DOWN:
         case ARROW_LEFT:
         case ARROW_RIGHT:
             editorMoveCursor(c);
             break;
+
+        case CTRL_KEY('l'):
+        case'\x1b':
+            break;
+
         default:
             editorInserChar(c);
             break;
