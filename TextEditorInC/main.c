@@ -235,10 +235,11 @@ void editorUpdateRow(erow *row) {
     row->rsize = index;
 }
 
-void editorAppendRow(char *s, size_t len) {
-    E.row = realloc(E.row, sizeof(erow) * (E.nrRows + 1));
+void editorInsertRow(int at,char *s, size_t len) {
+    if (at < 0 || at > E.nrRows) return;
 
-    int at = E.nrRows;
+    E.row = realloc(E.row, sizeof(erow) * (E.nrRows + 1));
+    memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (E.nrRows - at));
 
     E.row[at].size = len;
     E.row[at].chars = malloc(len + 1);
@@ -299,10 +300,24 @@ void editorRowDelChar(erow *row, int at) {
 
 void editorInserChar(int c) {
     if (E.cursorY == E.nrRows) {
-        editorAppendRow("", 0);
+        editorInsertRow(E.nrRows ,"", 0);
     }
     editorRowInsertChar(&E.row[E.cursorY], E.cursorX, c);
     E.cursorX++;
+}
+
+void editorInsertNewLine() {
+    if (E.cursorX == 0) {
+        editorInsertRow(E.cursorY, "", 0);
+    }else {
+        erow *row = &E.row[E.cursorY];
+        editorInsertRow(E.cursorY + 1, &row->chars[E.cursorX], row->size - E.cursorX);
+        row->size = E.cursorX;
+        row->chars[row->size] = '\0';
+        editorUpdateRow(row);
+    }
+    E.cursorY++;
+    E.cursorX = 0;
 }
 
 void editorDelChar() {
@@ -360,7 +375,7 @@ void editorOpen(char *filename) {
             lineLen--;
         }
 
-        editorAppendRow(line, lineLen);
+        editorInsertRow(E.nrRows ,line, lineLen);
     }
     free(line);
     fclose(fp);
@@ -536,7 +551,6 @@ void editorSetStatusMessage(const char *fmt, ...) {
     E.statusMsgTime = time(NULL);
 }
 
-
 /*** Input ***/
 
 void editorMoveCursor(int key) {
@@ -584,7 +598,7 @@ void editorProcessKeypress() {
     int c = editorReadKey();
     switch (c) {
         case '\r':
-            /* TODO */
+            editorInsertNewLine();
             break;
 
         case CTRL_KEY('q'):
