@@ -208,6 +208,7 @@ void editorUpdateSyntax(erow *row) {
     row->highlight = realloc(row->highlight, row->rsize);
     memset(row->highlight, HL_NORMAL, row->rsize);
 
+    //makes all numbers red:
     int i;
     for (i = 0; i < row->rsize; i++) {
         if (isdigit(row->render[i])) {
@@ -468,6 +469,15 @@ void editorFindCallback(char *query, int key) {
     static int lastMatch = -1;
     static int direction = 1;
 
+    static int savedHighlightLine;
+    static int *savedHighlightChar = NULL;
+
+    if (savedHighlightChar) {
+        memcpy(E.row[savedHighlightLine].highlight, savedHighlightChar, E.row[savedHighlightLine].size);
+        free(savedHighlightChar);
+        savedHighlightChar = NULL;
+    }
+
     if (key == '\r' || key == '\x1b') {
         lastMatch = -1;
         direction = 1;
@@ -501,6 +511,10 @@ void editorFindCallback(char *query, int key) {
             E.cursorY = current;
             E.cursorX = editorRowRxToCx(row, match - row->render);
             E.rowOff = E.nrRows;
+
+            savedHighlightLine = current;
+            savedHighlightChar = malloc(row->rsize);
+            memcpy(savedHighlightChar, row->highlight, row->rsize);
             memset(&row->highlight[match - row->render], HL_MATCH, strlen(query));
             break;
         }
