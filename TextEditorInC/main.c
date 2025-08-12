@@ -42,7 +42,15 @@ enum editorHighlight {
     HL_MATCH
 };
 
+#define HL_HIGHLIGHT_NUMBERS (1<<0)
+
 /*** data ***/
+
+struct editorSyntax {
+    char *fileType;
+    char **fileMatch;
+    int flags;
+};
 
 typedef struct erow {
     int size;
@@ -52,7 +60,7 @@ typedef struct erow {
     unsigned char *highlight;
 } erow;
 
-struct editorConfig {
+struct editorConfig{
     int cursorX, cursorY;
     int rx;
     int rowOff;
@@ -65,10 +73,25 @@ struct editorConfig {
     char *filename;
     char statusMSG[80];
     time_t statusMsgTime;
+    struct editorSyntax *syntax;
     struct termios orig_termios;
 };
 
 struct editorConfig E;
+
+/*** filetypes ***/
+
+char *C_HL_extensions[] = {".c", ".h", ".cpp", NULL};
+
+struct editorSyntax HLDB[] = {
+  {
+      "c",
+      C_HL_extensions,
+      HL_HIGHLIGHT_NUMBERS
+  },
+};
+
+#define HLBD_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
 
 /*** prototypes ***/
 
@@ -212,6 +235,10 @@ void editorUpdateSyntax(erow *row) {
     row->highlight = realloc(row->highlight, row->rsize);
     memset(row->highlight, HL_NORMAL, row->rsize);
 
+    if (E.syntax == NULL) {
+        return;
+    }
+
     int prevSep = 1;
 
     //makes all numbers red:
@@ -220,11 +247,13 @@ void editorUpdateSyntax(erow *row) {
         char c = row->render[i];
         unsigned char prevHl =  (i > 0) ? row->highlight[i-1] : HL_NORMAL;
 
-        if ((isdigit(c) && (prevSep || prevHl == HL_NUMBER)) || (c == '.' && prevHl == HL_NUMBER)) {
-            row->highlight[i] = HL_NUMBER;
-            i++;
-            prevSep = 0;
-            continue;
+        if (E.syntax->flags & HL_HIGHLIGHT_NUMBERS) {
+            if ((isdigit(c) && (prevSep || prevHl == HL_NUMBER)) || (c == '.' && prevHl == HL_NUMBER)) {
+                row->highlight[i] = HL_NUMBER;
+                i++;
+                prevSep = 0;
+                continue;
+            }
         }
         prevSep = isSeparator(c);
         i++;
@@ -236,6 +265,34 @@ int editorSyntaxToColor(int hl) {
         case HL_NUMBER: return 31;
         case HL_MATCH: return 34;
         default: return 37;
+    }
+}
+
+void editorSelectSyntaxHighlight() {
+    E.syntax = NULL;
+    if (E.filename == NULL) {
+        return;
+    }
+
+    char *ext = strchr(E.filename, '.');
+
+    for (unsigned int j = 0; j < HLBD_ENTRIES; j++) {
+        struct editorSyntax *s = &HLDB[j];
+        unsigned int i = 0;
+        while (s-> fileMatch[i]) {
+            int is_ext = (s->fileMatch[i][0] == '.');
+            if ((is_ext && ext && !strcmp(ext, s->fileMatch[i])) || (!is_ext && ext && ext && strcmp(ext, s->fileMatch[i]))) {
+                E.syntax = s;
+
+                int filerow;
+                for (filerow = 0; filerow < E.nrRows; filerow++) {
+                    editorUpdateSyntax(&E.row[filerow]);
+                }
+
+                return;
+            }
+            i++;
+        }
     }
 }
 
@@ -427,6 +484,8 @@ void editorOpen(char *filename) {
     free(E.filename);
     E.filename = strdup(filename);
 
+    editorSelectSyntaxHighlight();
+
     FILE *fp = fopen(filename, "r");
     if (!fp) {
         die("fopen");
@@ -455,6 +514,7 @@ void editorSave() {
             editorSetStatusMessage("Save aborted");
             return;
         }
+        editorSelectSyntaxHighlight();
     }
     int len;
     char *buf = editorRowToString(&len);
@@ -657,7 +717,7 @@ void editorDrawStatusBar(struct abuf *ab) {
     abAppend(ab, "\x1b[7m", 4);
     char status[80], rstatus[80];
     int len = snprintf(status, sizeof(status), "%.20s - %d lines %s", E.filename ? E.filename : "[No Filename]", E.nrRows, E.dirty ? "(modified)" : "");
-    int rlen = snprintf(rstatus, sizeof(rstatus), "%d/%d", E.cursorY + 1, E.nrRows);
+    int rlen = snprintf(rstatus, sizeof(rstatus), "%s | %d/%d", E.syntax ? E.syntax -> fileType : "no fit", E.cursorY + 1, E.nrRows);
     if (len > E.screencols) {
         len = E.screencols;
     }
@@ -900,6 +960,7 @@ void initEditor() {
     E.filename = NULL;
     E.statusMSG[0] = '\0';
     E.statusMsgTime = 0;
+    E.syntax = NULL;
 
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) {
         die("getWindowSize");
