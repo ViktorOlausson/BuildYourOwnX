@@ -38,6 +38,7 @@ enum editorKeys {
 
 enum editorHighlight {
     HL_NORMAL = 0,
+    HL_COMMENT,
     HL_STRING,
     HL_NUMBER,
     HL_MATCH
@@ -51,6 +52,7 @@ enum editorHighlight {
 struct editorSyntax {
     char *fileType;
     char **fileMatch;
+    char *singelLineCommentStart;
     int flags;
 };
 
@@ -89,6 +91,7 @@ struct editorSyntax HLDB[] = {
   {
       "c",
       C_HL_extensions,
+      "//",
       HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
   },
 };
@@ -241,6 +244,9 @@ void editorUpdateSyntax(erow *row) {
         return;
     }
 
+    char *scs =  E.syntax->singelLineCommentStart;
+    int scsLen = scs ? strlen(scs) : 0;
+
     int prevSep = 1;
     int inString = 0;
 
@@ -249,6 +255,13 @@ void editorUpdateSyntax(erow *row) {
     while (i < row->rsize) {
         char c = row->render[i];
         unsigned char prevHl =  (i > 0) ? row->highlight[i-1] : HL_NORMAL;
+
+        if (scsLen && !inString) {
+            if (!strncmp(&row->render[i], scs, scsLen)) {
+                memset(&row->highlight[i], HL_COMMENT, row->rsize - i);
+                break;
+            }
+        }
 
         if (E.syntax->flags & HL_HIGHLIGHT_STRINGS) {
             if (inString) {
@@ -287,6 +300,7 @@ void editorUpdateSyntax(erow *row) {
 
 int editorSyntaxToColor(int hl) {
     switch (hl) {
+        case HL_COMMENT: return 36;
         case HL_STRING: return 35;
         case HL_NUMBER: return 31;
         case HL_MATCH: return 34;
