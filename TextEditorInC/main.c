@@ -212,7 +212,6 @@ int getCursorPosition(int *rows, int *cols) {
 
     if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
 
-    //printf("\r\n");
     char c;
     while (i < sizeof(buf) - 1) {
         if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
@@ -223,9 +222,6 @@ int getCursorPosition(int *rows, int *cols) {
 
     if (buf[0] != '\x1b' || buf[1] != '[') return -1;
     if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) return -1;
-    //printf("\r\n&buf[1]: '%s' \r\n", &buf[1]);
-
-    //editorReadKey();
 
     return 0;
 }
@@ -609,7 +605,6 @@ void editorOpen(char *filename) {
     char *line = NULL;
     size_t lineCap = 0;
     ssize_t lineLen;
-    //lineLen = getline(&line, &lineCap, fp);
     while ((lineLen = getline(&line, &lineCap, fp)) != -1) {
         while (lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) {
             lineLen--;
@@ -878,7 +873,6 @@ void editorRefreshScreen() {
     struct abuf ab = ABUF_INIT;
 
     abAppend(&ab, "\x1b[?25l", 6);
-    //abAppend(&ab, "\x1b[2J", 4);
     abAppend(&ab, "\x1b[H", 3);
 
     editorDrawRows(&ab);
