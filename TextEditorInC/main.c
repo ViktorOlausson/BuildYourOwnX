@@ -106,7 +106,7 @@ struct editorSyntax HLDB[] = {
       "c",
       C_HL_extensions,
       C_HL_keywords,
-      "//", "/*", "*/"
+      "//", "/*", "*/",
       HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
   },
 };
@@ -262,8 +262,8 @@ void editorUpdateSyntax(erow *row) {
     char **keywords = E.syntax->keywords;
 
     char *scs =  E.syntax->singelLineCommentStart;
-    char mcs = E.syntax->multilineCommentStart;
-    char mce = E.syntax->multilineCommentEnd;
+    char *mcs = E.syntax->multilineCommentStart;
+    char *mce = E.syntax->multilineCommentEnd;
 
 
     int scsLen = scs ? strlen(scs) : 0;
