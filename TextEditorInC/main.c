@@ -1065,6 +1065,24 @@ void editorProcessKeypress() {
     }
 }
 
+/*** signals ***/
+
+void handelSignal(int sig) {
+    disableRawMode();
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
+
+    fprintf(stdout, "crash with error: %d (%s) \n", sig, strsignal(sig));
+
+    exit(1);
+}
+
+void setupSignalHandler() {
+    signal(SIGINT, handelSignal);
+    signal(SIGTERM, handelSignal);
+    signal(SIGSEGV, handelSignal);
+}
+
 /*** init/main function ***/
 
 void initEditor() {
@@ -1089,6 +1107,7 @@ void initEditor() {
 
 int main(int argc, char *argv[]) {
     enableRawMode();
+    setupSignalHandler();
     initEditor();
     if (argc >= 2) {
         editorOpen(argv[1]);
