@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,7 @@
 #define EDITOR_VERSION "0.0.1"
 #define TAB_STOP 8
 #define QUIT_TIMES 3
+#define SAVE_TIMES 3
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -618,6 +620,8 @@ void editorOpen(char *filename) {
 }
 
 void editorSave() {
+    static int saveTimes = SAVE_TIMES;
+
     if (E.filename == NULL) {
         E.filename = editorPrompt("Save as: %s (ESC to cancel)", NULL);
         if (E.filename == NULL) {
@@ -626,6 +630,16 @@ void editorSave() {
         }
         editorSelectSyntaxHighlight();
     }
+
+    char *dot = strrchr(E.filename, '.');
+    if ((dot == NULL || dot[1] == '\0') && saveTimes > 0) {
+        editorSetStatusMessage("WARNING: no file extantions. "
+                        "Press CTRL-S %d more times to confirm save.", saveTimes);
+
+        saveTimes--;
+        return;
+    }
+
     int len;
     char *buf = editorRowToString(&len);
 
@@ -986,6 +1000,7 @@ void editorMoveCursor(int key) {
 
 void editorProcessKeypress() {
     static int quitTimes = QUIT_TIMES;
+    static int saveTimes = SAVE_TIMES;
 
     int c = editorReadKey();
     switch (c) {
@@ -1006,6 +1021,7 @@ void editorProcessKeypress() {
             break;
 
         case CTRL_KEY('s'):
+
             editorSave();
             break;
 
