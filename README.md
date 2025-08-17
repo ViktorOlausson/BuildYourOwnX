@@ -9,6 +9,6 @@ A(docker needed):<br/>
   - run: `docker run -d --name {your name} --mount type=bind,source="{absolut path}",target=/data -w /data --entrypoint sleep texteditor-image infinity`
   - run: `docker exec -it {your name} /app/TextEditorInC/TextEditor /data/{path}`<br/>
 ###
-B(docker needed, only arm64 ATM)
+B(docker needed, only amd64 ATM)
   - Run: `docker pull viktorolausson/texteditorinc`
   - Run: `docker run --rm -it --mount type=bind,source="{path}",target=/data/ viktorolausson/texteditorinc:latest /data/{path}`
