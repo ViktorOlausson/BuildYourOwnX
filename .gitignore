@@ -6,3 +6,4 @@ TextEditorInC/main.exe
 TextEditorInC/testFile.txt
 TextEditorInC/testFileMakefile.txt
 TextEditorInC/.idea/codeStyles/codeStyleConfig.xml
+.DS_Store
