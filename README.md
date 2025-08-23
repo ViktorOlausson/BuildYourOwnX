@@ -9,6 +9,7 @@ A(docker needed):<br/>
   - run: `docker run -d --name {your name} --mount type=bind,source="{absolut path}",target=/data -w /data --entrypoint sleep texteditor-image infinity`
   - run: `docker exec -it {your name} /app/TextEditorInC/TextEditor /data/{path}`<br/>
 ###
-B(docker needed, only amd64 ATM)
-  - Run: `docker pull viktorolausson/texteditorinc`
-  - Run: `docker run --rm -it --mount type=bind,source="{path}",target=/data/ viktorolausson/texteditorinc:latest /data/{path}`
+One Click(run) script(only Windows amd64 supported)
+  - Pull `https://github.com/ViktorOlausson/Scripts.git`
+  - Change into diractory where you saved it and move into `BuildYourOwnX\TextEditorInC`
+  - Run: `.\runTextEditorInC`
