@@ -73,9 +73,9 @@ function createWebServer(reqHandler){
                 if(!headersSent){
                     headersSent = true
                     // Add the date header
-                    setHeader('date', new Date().toGMTString())
+                    setHeader('date', new Date().toUTCString())
                     // Send the status line
-                    socket.write(`HTTP/1.1, ${status} ${statusText}\n\r`)
+                    socket.write(`HTTP/1.1 ${status} ${statusText}\n\r`)
                     // Send each following header
                     Object.keys(responseHeaders).forEach(headerKey => {
                         socket.write(`${headerKey}: ${responseHeaders[headerKey]}\r\n`)
@@ -108,7 +108,7 @@ function createWebServer(reqHandler){
                         // We know the full length of the response, let's set it
                         if(!responseHeaders['content-length']){
                             // Assume that chunk is a buffer, not a string!
-                            setHeader('transfer-encoding', chunk? chunk.length : 0)
+                            setHeader('content-length', chunk? chunk.length : 0)
                         }
                         sendHeaders()
                     }
