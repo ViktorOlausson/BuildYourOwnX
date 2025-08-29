@@ -1,4 +1,6 @@
 const net = require('net');
+const fs = require('fs');
+const path = require('path');
 
 function createWebServer(reqHandler){
     const server = net.createServer();
@@ -145,9 +147,27 @@ function createWebServer(reqHandler){
 }
 
 const webServer = createWebServer((req, res) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  res.setHeader('Content-Type','text/plain');
-  res.end('Hello World!');
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+//   res.setHeader('Content-Type','text/plain');
+//   res.end('Hello World!');
+    if(req.url ==='/' || req.url === '/index.html'){
+        const filePath = path.join(__dirname, '\\Site\\index.html')
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                res.setStatus(500, 'Internal Server Error');
+                res.setHeader('Content-Type', 'text/plain');
+                res.end('Error loading HTML file');
+            } else {
+                res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                res.setHeader('Content-Length', data.length);
+                res.end(data);
+            }
+        })
+    }else{
+        res.setStatus(404, 'Page not found')
+        res.setHeader('Content-Type', 'text/plain');
+        res.end('Page Not Found');
+    }
 });
 
 webServer.listen(5000);
