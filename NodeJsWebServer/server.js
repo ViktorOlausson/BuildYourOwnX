@@ -2,6 +2,12 @@ const net = require('net');
 const fs = require('fs');
 const path = require('path');
 
+const configPath = path.join(__dirname, 'config.json');
+const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+
+const HOST = config.host || 'localhost';
+const PORT = config.port || 5000;
+
 function createWebServer(reqHandler){
     const server = net.createServer();
     server.on('connection', handleConnection)
@@ -141,6 +147,8 @@ function createWebServer(reqHandler){
         })
     }
 
+    
+    console.log("listening to: ")
     return{
         listen: (port) => server.listen(port)
     }
@@ -182,24 +190,7 @@ function serveFile(res, filePath){
 
 const webServer = createWebServer((req, res) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    // if(req.url ==='/' || req.url === '/index.html'){
-    //     const filePath = path.join(__dirname, '\\Site\\index.html')
-    //     fs.readFile(filePath, (err, data) => {
-    //         if (err) {
-    //             res.setStatus(500, 'Internal Server Error');
-    //             res.setHeader('Content-Type', 'text/plain');
-    //             res.end('Error loading HTML file');
-    //         } else {
-    //             res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    //             res.setHeader('Content-Length', data.length);
-    //             res.end(data);
-    //         }
-    //     })
-    // }else{
-    //     res.setStatus(404, 'Page not found')
-    //     res.setHeader('Content-Type', 'text/plain');
-    //     res.end('Page Not Found');
-    // }
+
     if(req.method !== 'GET'){
         res.setStatus(405, 'Method Not Allowed')
         res.setHeader('Allow', 'GET')
@@ -221,6 +212,6 @@ const webServer = createWebServer((req, res) => {
     }
 });
 
-webServer.listen(5000);
+webServer.listen(PORT);
 
 //server.listen(5000);
