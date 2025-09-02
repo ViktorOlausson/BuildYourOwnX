@@ -8,3 +8,4 @@ TextEditorInC/testFileMakefile.txt
 TextEditorInC/.idea/codeStyles/codeStyleConfig.xml
 .DS_Store
 NodeJsWebServer/runServer.txt
+NodeJsWebServer/test/test.html
