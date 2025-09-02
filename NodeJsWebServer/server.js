@@ -7,18 +7,34 @@ const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
 const HOST = config.host || 'localhost';
 const PORT = config.port || 5000;
+const ROOT = path.resolve(__dirname, config.root || './Site');
 
 function createWebServer(reqHandler){
     const server = net.createServer();
     server.on('connection', handleConnection)
     function handleConnection(socket){
     //Subscribe to readable event once to start calling .read()
+        //added timeout to prevent hanging sockets
+        socket.setTimeout(5000, () => {
+            try { socket.destroy(); } catch {}
+        });
+        // added socket error handler
+        socket.once('error', (err) => {
+            console.error('socket error:', err && err.message);
+            try { socket.destroy(); } catch {}
+        });
+
         socket.once('readable', function(){
+            
+
             //set up buffer to hold incoming data
-            let reqBuffer = Buffer.from('');
+            let reqBuffer = Buffer.alloc(0)
             //temp buffer to read in chunk
             let buf;
             let reqHead;
+
+            //simple max header size guard
+            const MAX_HEADER_BYTES = 8 * 1024; 
             while(true){
                 //read data from socket
                 buf = socket.read();
@@ -28,6 +44,15 @@ function createWebServer(reqHandler){
                 //concat existing request buffer with new data
                 reqBuffer = Buffer.concat([reqBuffer, buf])
 
+                if (reqBuffer.length > MAX_HEADER_BYTES) {
+                    try {
+                    socket.write('HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+                    } finally {
+                    socket.destroy();
+                    }
+                    return;
+                }
+
                 //Check if we've reached \r\n\r\n, indicating end of header
                 let marker = reqBuffer.indexOf('\r\n\r\n')
                 if(marker !== -1){
@@ -36,21 +61,31 @@ function createWebServer(reqHandler){
                     // The header is everything we read, up to and not including \r\n\r\n
                     reqHead = reqBuffer.slice(0, marker).toString()
                     // This pushes the extra data we read back to the socket's readable stream
-                    socket.unshift(remaining)
+                    if (remaining.length) socket.unshift(remaining)
                     break
                 }
             }
           
+            if (!reqHead || !reqHead.includes('\r\n')) { // <-- guard if header never completed
+                try {
+                    socket.write('HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+                } finally {
+                    socket.destroy();
+                }
+                return;
+            }
             /* Request-related business */
             // Start parsing the header
             const reqHeaders = reqHead.split('\r\n')
             const reqLine = reqHeaders.shift().split(' ')
             const headers = reqHeaders.reduce((acc, currentHeader) => {
-                const [key, value] = currentHeader.split(':')
-                return {
-                    ...acc,
-                    [key.trim().toLowerCase()] : value.trim()
-                }
+                if (!currentHeader) return acc;          // <-- skip empty header lines
+                const idx = currentHeader.indexOf(':');  // <-- safer parsing
+                if (idx === -1) return acc;
+                const key = currentHeader.slice(0, idx).trim().toLowerCase();
+                const value = currentHeader.slice(idx + 1).trim();
+                acc[key] = value;
+                return acc;
             }, {})
 
             // This object will be sent to the handleRequest callback.
@@ -81,7 +116,7 @@ function createWebServer(reqHandler){
                     // Add the date header
                     setHeader('date', new Date().toUTCString())
                     // Send the status line
-                    socket.write(`HTTP/1.1 ${status} ${statusText}\n\r`)
+                    socket.write(`HTTP/1.1 ${status} ${statusText}\r\n`)
                     // Send each following header
                     Object.keys(responseHeaders).forEach(headerKey => {
                         socket.write(`${headerKey}: ${responseHeaders[headerKey]}\r\n`)
@@ -97,12 +132,12 @@ function createWebServer(reqHandler){
                         // If there's no content-length header, then specify Transfer-Encoding chunked
                         if(!responseHeaders['content-length']){
                             isChunked = true
-                            setHeader('transfer-encoding', 'chunked')
+                            setHeader('transfer-encoding', 'chunked');
                         }
                         sendHeaders()
                     }
                     if(isChunked){
-                        const size = chunk.length.toString(16)
+                        const size = Buffer.byteLength(chunk).toString(16);
                         socket.write(`${size}\r\n`)
                         socket.write(chunk)
                         socket.write('\r\n')
@@ -114,13 +149,13 @@ function createWebServer(reqHandler){
                         // We know the full length of the response, let's set it
                         if(!responseHeaders['content-length']){
                             // Assume that chunk is a buffer, not a string!
-                            setHeader('content-length', chunk? chunk.length : 0)
+                            setHeader('content-length', chunk ? Buffer.byteLength(chunk) : 0);
                         }
                         sendHeaders()
                     }
                     if(isChunked){
                         if(chunk){
-                            const size = chunk.length.toString(16)
+                            const size = Buffer.byteLength(chunk).toString(16);
                             socket.write(`${size}\r\n`)
                             socket.write(chunk)
                             socket.write('\r\n')
@@ -143,11 +178,21 @@ function createWebServer(reqHandler){
                 }
             }
             // Send the request to the handler!
-            reqHandler(request, response)
+            //reqHandler(request, response)
+            try {
+                reqHandler(request, response);
+            } catch (e) {                               // <-- guard handler exceptions
+                console.error('handler error:', e && e.message);
+                try {
+                    socket.write('HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+                } finally {
+                    socket.destroy();
+                }
+            }
         })
     }
 
-    
+
     console.log("listening to: ")
     return{
         listen: (port) => server.listen(port)
@@ -166,10 +211,9 @@ const MIME = {
 }
 
 function serveFile(res, filePath){
-    const root = path.join(__dirname, 'Site')
-    const safePath = path.normalize(path.join(root, filePath))
+    const safePath = path.normalize(path.join(ROOT, filePath));
     
-    if(!safePath.startsWith(root)){
+    if(!safePath.startsWith(ROOT)){
         res.setStatus(403, 'Forbidden')
         return res.end('Forbidden')
     }
