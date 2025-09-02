@@ -50,7 +50,7 @@ function createWebServer(reqHandler){
             // This object will be sent to the handleRequest callback.
             const request = {
                 method: reqLine[0],
-                url: reqLine[1],
+                url: decodeURIComponent(reqLine[1].split('?')[0] || '/'),
                 httpVersion: reqLine[2].split('/')[1],
                 headers,
                 socket
@@ -145,28 +145,79 @@ function createWebServer(reqHandler){
         listen: (port) => server.listen(port)
     }
 }
+// MIME helper
+const MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',  
+    '.js': 'application/javascript; charset=utf-8',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.json': 'application/json; charset=utf-8',
+    '.txt': 'text/plain; charset=utf-8'
+}
+
+function serveFile(res, filePath){
+    const root = path.join(__dirname, 'Site')
+    const safePath = path.normalize(path.join(root, filePath))
+    
+    if(!safePath.startsWith(root)){
+        res.setStatus(403, 'Forbidden')
+        return res.end('Forbidden')
+    }
+
+    fs.readFile(safePath, (err, data) => {
+        if (err) {
+            res.setStatus(err.code === 'ENOENT' ? 404 : 500);
+            res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            res.end(err.code === 'ENOENT' ? 'Not Found' : 'Error reading file');
+        } else {
+            const ext = path.extname(safePath).toLowerCase();
+            res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
+            res.setHeader('Content-Length', data.length);
+            res.end(data);
+        }
+    });
+}
 
 const webServer = createWebServer((req, res) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-//   res.setHeader('Content-Type','text/plain');
-//   res.end('Hello World!');
-    if(req.url ==='/' || req.url === '/index.html'){
-        const filePath = path.join(__dirname, '\\Site\\index.html')
-        fs.readFile(filePath, (err, data) => {
-            if (err) {
-                res.setStatus(500, 'Internal Server Error');
-                res.setHeader('Content-Type', 'text/plain');
-                res.end('Error loading HTML file');
-            } else {
-                res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                res.setHeader('Content-Length', data.length);
-                res.end(data);
+    // if(req.url ==='/' || req.url === '/index.html'){
+    //     const filePath = path.join(__dirname, '\\Site\\index.html')
+    //     fs.readFile(filePath, (err, data) => {
+    //         if (err) {
+    //             res.setStatus(500, 'Internal Server Error');
+    //             res.setHeader('Content-Type', 'text/plain');
+    //             res.end('Error loading HTML file');
+    //         } else {
+    //             res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    //             res.setHeader('Content-Length', data.length);
+    //             res.end(data);
+    //         }
+    //     })
+    // }else{
+    //     res.setStatus(404, 'Page not found')
+    //     res.setHeader('Content-Type', 'text/plain');
+    //     res.end('Page Not Found');
+    // }
+    if(req.method !== 'GET'){
+        res.setStatus(405, 'Method Not Allowed')
+        res.setHeader('Allow', 'GET')
+        return res.end('Method Not Allowed')
+    }
+
+    switch(req.url){
+        case '/':
+        case '/index.html':
+            return serveFile(res, 'index.html');
+
+        default:
+            if (req.url.startsWith('/static/')) {
+            const rel = req.url.replace(/^\/static\//, '');
+            return serveFile(res, path.join('static', rel));
             }
-        })
-    }else{
-        res.setStatus(404, 'Page not found')
-        res.setHeader('Content-Type', 'text/plain');
-        res.end('Page Not Found');
+            // Fallback for React Router routes:
+            return serveFile(res, 'index.html'); // <--- important for React Router
     }
 });
 
