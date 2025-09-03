@@ -13,3 +13,9 @@ One Click(run) script(only Windows amd64 supported)
   - Pull `https://github.com/ViktorOlausson/Scripts.git`
   - Change into diractory where you saved it and move into `BuildYourOwnX\TextEditorInC`
   - Run: `.\runTextEditorInC`
+
+### To run NodeJsWebServer:
+A(node needed):<br/>
+  - Pull this repo
+  - From `...\BuildYourOwnX\NodeJsWebServer` run: `node .\server.js`
+  - go to `http://localhost:5000/`
