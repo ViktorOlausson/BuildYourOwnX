@@ -1,4 +1,5 @@
 {
-  "host": "whatever.com",
-  "port": 8000
+  "host": "localhost",
+  "port": 5000,
+  "root": "./Site"
 }
