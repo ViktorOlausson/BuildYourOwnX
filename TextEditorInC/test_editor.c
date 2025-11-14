@@ -7,3 +7,12 @@
 #include <string.h>
 
 #include "editor.h"
+
+/*** Resets the editor for each test ***/
+static void resetEditor(void) {
+    memset(&E, 0, sizeof(E));
+    E.row = NULL;
+    E.nrRows = 0;
+    E.dirty = 0;
+}
+
