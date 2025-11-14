@@ -1,0 +1,72 @@
+//
+// Created by vikto on 2025-11-14.
+//
+
+#ifndef EDITOR_H
+#define EDITOR_H
+
+#include <stddef.h>
+#include <time.h>
+#include <termios.h>
+
+/*** data ***/
+
+struct editorSyntax {
+    char *fileType;
+    char **fileMatch;
+    char **keywords;
+    char *singelLineCommentStart;
+    char* multilineCommentStart;
+    char *multilineCommentEnd;
+    int flags;
+};
+
+typedef struct erow {
+    int index;
+    int size;
+    int rsize;
+    char *chars;
+    char *render;
+    unsigned char *highlight;
+    int hlOpenComment;
+} erow;
+
+struct editorConfig{
+    int cursorX, cursorY;
+    int rx;
+    int rowOff;
+    int colOff;
+    int screenrows;
+    int screencols;
+    int nrRows;
+    erow *row;
+    int dirty;
+    char *filename;
+    char statusMSG[80];
+    time_t statusMsgTime;
+    struct editorSyntax *syntax;
+    struct termios orig_termios;
+};
+
+struct editorConfig E;
+
+// row operations
+int  editorRowCxToRx(erow *row, int cursorX);
+int  editorRowRxToCx(erow *row, int rx);
+void editorUpdateRow(erow *row);
+void editorInsertRow(int at, char *s, size_t len);
+void editorDelRow(int at);
+void editorRowInsertChar(erow *row, int at, int c);
+void editorRowAppenString(erow *row, char *s, size_t len);
+void editorRowDelChar(erow *row, int at);
+
+// editor operations
+void editorInserChar(int c);
+void editorInsertNewLine(void);
+void editorDelChar(void);
+
+// file I/O helpers
+char *editorRowToString(int *bufLen);
+
+
+#endif //EDITOR_H
