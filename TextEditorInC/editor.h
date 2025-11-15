@@ -5,9 +5,47 @@
 #ifndef EDITOR_H
 #define EDITOR_H
 
+
+
 #include <stddef.h>
 #include <time.h>
 #include <termios.h>
+
+/*** Defines ***/
+
+#define EDITOR_VERSION "0.0.1"
+#define TAB_STOP 8
+#define QUIT_TIMES 3
+#define SAVE_TIMES 3
+
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+enum editorKeys {
+    BACKSPACE = 127,
+    ARROW_LEFT = 1000,
+    ARROW_RIGHT,
+    ARROW_UP,
+    ARROW_DOWN,
+    DELETE_KEY,
+    HOME_KEY,
+    END_KEY,
+    PAGE_UP,
+    PAGE_DOWN,
+};
+
+enum editorHighlight {
+    HL_NORMAL = 0,
+    HL_COMMENT,
+    HL_MLCOMMENT,
+    HL_KEYWORD1,
+    HL_KEYWORD2,
+    HL_STRING,
+    HL_NUMBER,
+    HL_MATCH
+};
+
+#define HL_HIGHLIGHT_NUMBERS (1<<0)
+#define HL_HIGHLIGHT_STRINGS (1<<1)
 
 /*** data ***/
 
@@ -48,7 +86,7 @@ struct editorConfig{
     struct termios orig_termios;
 };
 
-struct editorConfig E;
+extern struct editorConfig E;
 
 // row operations
 int  editorRowCxToRx(erow *row, int cursorX);
@@ -59,6 +97,7 @@ void editorDelRow(int at);
 void editorRowInsertChar(erow *row, int at, int c);
 void editorRowAppenString(erow *row, char *s, size_t len);
 void editorRowDelChar(erow *row, int at);
+void editorFreeRow(erow *row);
 
 // editor operations
 void editorInserChar(int c);

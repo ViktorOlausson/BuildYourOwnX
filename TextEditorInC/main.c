@@ -19,43 +19,13 @@
 #include "editor.h"
 
 /*** defines ***/
-#define EDITOR_VERSION "0.0.1"
-#define TAB_STOP 8
-#define QUIT_TIMES 3
-#define SAVE_TIMES 3
 
-#define CTRL_KEY(k) ((k) & 0x1f)
-
-enum editorKeys {
-    BACKSPACE = 127,
-    ARROW_LEFT = 1000,
-    ARROW_RIGHT,
-    ARROW_UP,
-    ARROW_DOWN,
-    DELETE_KEY,
-    HOME_KEY,
-    END_KEY,
-    PAGE_UP,
-    PAGE_DOWN,
-};
-
-enum editorHighlight {
-    HL_NORMAL = 0,
-    HL_COMMENT,
-    HL_MLCOMMENT,
-    HL_KEYWORD1,
-    HL_KEYWORD2,
-    HL_STRING,
-    HL_NUMBER,
-    HL_MATCH
-};
-
-#define HL_HIGHLIGHT_NUMBERS (1<<0)
-#define HL_HIGHLIGHT_STRINGS (1<<1)
+struct editorConfig E = {0};
+//rest in editor.h(header)
 
 /*** data ***/
 
-//in editor.h(header)
+
 
 /*** filetypes ***/
 
@@ -1085,7 +1055,7 @@ void initEditor() {
     E.screenrows -= 2;
 }
 
-int main(int argc, char *argv[]) {
+int editor(int argc, char *argv[]) {
     enableRawMode();
     setupSignalHandler();
     initEditor();
