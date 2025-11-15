@@ -25,8 +25,6 @@ struct editorConfig E = {0};
 
 /*** data ***/
 
-
-
 /*** filetypes ***/
 
 char *C_HL_extensions[] = {".c", ".h", ".cpp", NULL};
@@ -434,6 +432,11 @@ void editorDelRow(int at) {
     editorFreeRow(&E.row[at]);
     memmove(&E.row[at], &E.row[at + 1], sizeof(erow) * (E.nrRows - at - 1));
     E.nrRows--;
+
+    for (int j = at; j < E.nrRows; j++) {
+        E.row[j].index = j;
+    }
+
     E.dirty++;
 }
 
