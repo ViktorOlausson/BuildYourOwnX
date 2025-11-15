@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include "editor.h"
+#include "../include/editor.h"
 
 /*** defines ***/
 
@@ -1058,7 +1058,7 @@ void initEditor() {
     E.screenrows -= 2;
 }
 
-int editor(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
     enableRawMode();
     setupSignalHandler();
     initEditor();
