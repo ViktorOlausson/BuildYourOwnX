@@ -13,7 +13,7 @@
 
 /*** Defines ***/
 
-#define EDITOR_VERSION "0.0.1"
+#define EDITOR_VERSION "0.0.3"
 #define TAB_STOP 8
 #define QUIT_TIMES 3
 #define SAVE_TIMES 3
