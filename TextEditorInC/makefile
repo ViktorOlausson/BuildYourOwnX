@@ -7,6 +7,9 @@ TEST_BIN	:= test_editor
 EDITOR_SRCS := \
     src/main.c \
 	#src/editor_rows.c \
+    #src/editor_input.c \
+    #src/editor_render.c \
+    #src/editor_search.c
 
 TEST_SRCS := \
     tests/test_editor.c \
@@ -25,8 +28,17 @@ $(EDITOR_BIN): $(EDITOR_OBJS)
 $(TEST_BIN): $(TEST_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
+src/main.o: src/main.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+tests/test_editor.o: tests/test_editor.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
 clean:
 	rm -f $(EDITOR_BIN) $(TEST_BIN) $(EDITOR_OBJS) $(TEST_OBJS)
+
+	
+fresh: clean all
