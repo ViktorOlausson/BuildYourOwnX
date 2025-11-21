@@ -6,10 +6,14 @@ RUN apt-get update && \
    apt-get install -y --no-install-recommends git build-essential ca-certificates && \ 
    rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/ViktorOlausson/BuildYourOwnX.git /app
+#RUN git clone https://github.com/ViktorOlausson/BuildYourOwnX.git /app
 
 WORKDIR /app/TextEditorInC
 
-RUN gcc main.c -o TextEditor
+COPY . .
 
-ENTRYPOINT [ "/app/TextEditorInC/TextEditor"]
+#RUN gcc main.c -o TextEditor
+
+RUN make
+
+ENTRYPOINT [ "/app/TextEditorInC/text_editor"]
