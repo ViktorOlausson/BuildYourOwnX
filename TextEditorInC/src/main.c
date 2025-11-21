@@ -1058,7 +1058,7 @@ void initEditor() {
     E.screenrows -= 2;
 }
 
-#ifndef TESTBUILD
+#ifndef TEST_BUILD
 int main(int argc, char *argv[]) {
     enableRawMode();
     setupSignalHandler();
