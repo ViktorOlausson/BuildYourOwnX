@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "include/editor.h"
+#include "../include/editor.h"
 
 /*** Resets the editor for each test ***/
 static void resetEditor(void) {
