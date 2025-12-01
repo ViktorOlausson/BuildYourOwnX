@@ -1,15 +1,4 @@
-#win project root path
-$projectSubDirName = "TextEditorInC"
-$scriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
-
-$mainFolder = Split-Path -Parent $scriptFolder
-
-$projectRoot = Join-Path $mainFolder $projectSubDirName
-
-$projectWslPath = wsl wslpath -a "$projectRoot"
-
 $pwd = "cd .. && " + "cd TextEditorInC && " + "make test && " + "./test_editor && " + "make clean && " + "make main"
-
 
 wsl -d Ubuntu sh -c "$pwd"
 
