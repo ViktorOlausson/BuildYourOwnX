@@ -1,3 +1,5 @@
+& .\BuildAndRunTestEditor.ps1
+
 Set-Location "C:\Users\vikto\source\git\BuildYourOwnX\TextEditorInC"
 
 docker build -t viktorolausson/texteditorinc .
