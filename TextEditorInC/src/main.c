@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include "../include/editor.h"
+#include "../include/utf8.h"
 
 /*** defines ***/
 
@@ -499,14 +500,52 @@ void editorDelChar() {
 
     erow *row = &E.row[E.cursorY];
     if (E.cursorX > 0) {
-        editorRowDelChar(row, E.cursorX - 1);
-        E.cursorX--;
+        int oldCursorX = E.cursorX;
+        int newCursorX = utf8PrevCharIndex(row, E.cursorX);
+        if (newCursorX < 0) newCursorX = 0; // safety
+        int charBytes = oldCursorX - newCursorX;
+
+        // move the tail (INCLUDING '\0') left over the deleted bytes
+        memmove(&row->chars[newCursorX],
+                &row->chars[oldCursorX],
+                (row->size - oldCursorX) + 1);
+
+        row->size -= charBytes;
+        E.cursorX = newCursorX;
+
+        editorUpdateRow(row);
+        E.dirty++;
     }else {
-        E.cursorX = E.row[E.cursorY - 1].size;
+        int prevLen = E.row[E.cursorY - 1].size;
         editorRowAppenString(&E.row[E.cursorY - 1], row->chars, row->size);
         editorDelRow(E.cursorY);
         E.cursorY--;
+        E.cursorX = prevLen;
     }
+
+}
+
+void editorDelKey(void) {
+    if (E.cursorY == E.nrRows) return;
+    erow *row = &E.row[E.cursorY];
+
+    if (E.cursorX >= row->size) {
+        if (E.cursorY + 1 >= E.nrRows) return;
+        editorRowAppenString(row, E.row[E.cursorY + 1].chars, E.row[E.cursorY + 1].size);
+        editorDelRow(E.cursorY+1);
+        return;
+    }
+
+    int nextX = utf8NextCharIndex(row, E.cursorX);
+    int charBytes = nextX - E.cursorX;
+    if (charBytes <= 0) return;
+    memmove(&row->chars[E.cursorX],
+        &row->chars[E.cursorX + charBytes],
+        row->size - (E.cursorX + charBytes) + 1);
+
+    row->size -= charBytes;
+    editorUpdateRow(row);
+    E.dirty++;
 }
 
 /*** file I/O ***/
@@ -900,18 +939,18 @@ void editorMoveCursor(int key) {
     erow *row = (E.cursorY >= E.nrRows) ? NULL : &E.row[E.cursorY];
     switch (key) {
         case ARROW_LEFT:
-            if (E.cursorX != 0) {
-                E.cursorX--;
+            if (row && E.cursorX > 0) {
+                E.cursorX = utf8PrevCharIndex(row, E.cursorX);
             }else if (E.cursorY > 0) {
                 E.cursorY--;
-                E.cursorX = E.row[E.cursorY].size;
+                row = &E.row[E.cursorY];
+                E.cursorX = row->size;
             }
             break;
         case ARROW_RIGHT:
             if (row && E.cursorX < row->size) {
-                E.cursorX++;
-            }
-            else if (row && E.cursorX == row->size) {
+                E.cursorX = utf8NextCharIndex(row, E.cursorX);
+            }else if (row && E.cursorX == row->size && E.cursorY < E.nrRows -1) {
                 E.cursorY++;
                 E.cursorX = 0;
             }
@@ -976,9 +1015,11 @@ void editorProcessKeypress() {
 
         case BACKSPACE:
         case CTRL_KEY('h'):
-        case DELETE_KEY:
-            if (c == DELETE_KEY) editorMoveCursor(ARROW_RIGHT);
             editorDelChar();
+            break;
+
+        case DELETE_KEY:
+            editorDelKey();
             break;
 
         case PAGE_UP:

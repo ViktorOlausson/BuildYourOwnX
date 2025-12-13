@@ -21,7 +21,7 @@ int utf8IsStartByte(unsigned char c) {
 
 int utf8NextCharIndex(const erow *row, int cx) {
     if (!row) return cx;
-    if (row >= row->size) return row->size;
+    if (cx >= row->size) return row->size;
 
     const unsigned char *s = (const unsigned char *)row->chars + cx;
     int len = utf8CharLen(s);
@@ -36,7 +36,7 @@ int utf8PrevCharIndex(const erow *row, int cx) {
     if (cx <= 0) return 0;
 
     int i = cx - 1;
-    while (i >= 0 && !utf8IsStartByte((unsigned char)row->chars[i])) {
+    while (i > 0 && !utf8IsStartByte((unsigned char)row->chars[i])) {
         i--;
     }
     return i;

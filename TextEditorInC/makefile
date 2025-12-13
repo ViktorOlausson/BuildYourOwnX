@@ -1,6 +1,8 @@
 CC		:= gcc
-CFLAGS  := -Wall -Wextra -std=c99 -g -I. -Iinclude
+CFLAGS  := 
 TEST_CFLAGS := $(CFLAGS) -DTEST_BUILD
+
+# -Wall -Wextra -std=c99 -g -I. -Iinclude
 
 EDITOR_BIN	:= text_editor
 TEST_BIN	:= test_editor
@@ -9,6 +11,7 @@ TEST_BIN	:= test_editor
 
 EDITOR_SRCS := \
     src/main.c \
+	src/utf8.c \
 	#src/editor_rows.c \
     #src/editor_input.c \
     #src/editor_render.c \
