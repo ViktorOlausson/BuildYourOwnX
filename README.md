@@ -1,6 +1,7 @@
 # Description
-This repo contains X different projects:<br/>
+This repo contains 2 different projects:<br/>
 An text editor in C
+A nodeJS web server
 
 ### To run TextEditorInC:
 A: Manuel run(docker needed):<br/>
